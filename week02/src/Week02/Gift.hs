@@ -33,7 +33,7 @@ import           Text.Printf         (printf)
 {-# INLINABLE mkValidator #-}  --Haskell pragma to allow the compiler to inline the definition of mkValidator in the || brackets
 mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()   --Datum, Redeemer and Context data type is BuiltinData.
                                                                  -- "()" Unit is the return type, similar to void
-mkValidator _ _ _ = ()                                           --always passes validation. 
+mkValidator _ _ _ = ()                                           --always passes validation. 2
 
 validator :: Validator
 validator = mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])  --the oxford brackets "||" converts a Haskell expression to a plutus core syntax tree of that expression
