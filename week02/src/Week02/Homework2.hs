@@ -43,23 +43,28 @@ PlutusTx.unstableMakeIsData ''MyRedeemer
 {-# INLINABLE mkValidator #-}
 -- This should validate if and only if the two Booleans in the redeemer are equal!
 mkValidator :: () -> MyRedeemer -> ScriptContext -> Bool
-mkValidator _ _ _ = True -- FIX ME!
+mkValidator _ (MyRedeemer r1 r2) _ = traceIfFalse "wrong redeemer" $ r1 == r2 -- FIX ME!
 
 data Typed
 instance Scripts.ValidatorTypes Typed where
-    -- Implement me!
+    type instance DatumType Typed = () -- Implement me!
+    type instance RedeemerType Typed = MyRedeemer
 
 typedValidator :: Scripts.TypedValidator Typed
-typedValidator = undefined -- FIX ME!
+typedValidator = Scripts.mkTypedValidator @Typed -- FIX ME!
+    $$(PlutusTx.compile [|| mkValidator ||])
+    $$(PlutusTx.compile [|| wrap ||])
+  where
+    wrap = Scripts.wrapValidator @() @MyRedeemer
 
 validator :: Validator
-validator = undefined -- FIX ME!
+validator = Scripts.validatorScript typedValidator -- FIX ME!
 
 valHash :: Ledger.ValidatorHash
-valHash = undefined -- FIX ME!
+valHash = Scripts.validatorHash typedValidator -- FIX ME!
 
 scrAddress :: Ledger.Address
-scrAddress = undefined -- FIX ME!
+scrAddress = scriptAddress validator -- FIX ME!
 
 type GiftSchema =
             Endpoint "give" Integer
