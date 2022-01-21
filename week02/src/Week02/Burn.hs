@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE OverloadedStrings   #-}  --need to use to produce a string
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -18,7 +18,7 @@ import           Plutus.Contract
 import           PlutusTx            (Data (..))
 import qualified PlutusTx
 import qualified PlutusTx.Builtins   as Builtins
-import           PlutusTx.Prelude    hiding (Semigroup(..), unless)
+import           PlutusTx.Prelude    hiding (Semigroup(..), unless)  -- special version of Prelude for Plutus
 import           Ledger              hiding (singleton)
 import           Ledger.Constraints  as Constraints
 import qualified Ledger.Scripts      as Scripts
@@ -33,7 +33,7 @@ import           Text.Printf         (printf)
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidator _ _ _ = traceError "BURNT!"
+mkValidator _ _ _ = traceError "BURNT!"  --will print out the error message "BURNT!" in Playground
 
 validator :: Validator
 validator = mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])

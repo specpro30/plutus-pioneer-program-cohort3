@@ -30,9 +30,10 @@ import           Playground.Types     (KnownCurrency (..))
 import           Prelude              (IO, Semigroup (..), String)
 import           Text.Printf          (printf)
 
-newtype MySillyRedeemer = MySillyRedeemer Integer
+newtype MySillyRedeemer = MySillyRedeemer Integer    --custom data type MySillyRedeemer
 
-PlutusTx.unstableMakeIsData ''MySillyRedeemer
+PlutusTx.unstableMakeIsData ''MySillyRedeemer        --will write an instance at compile time and splice it in at this point
+                                                     --there is also a stable version for production
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: () -> MySillyRedeemer -> ScriptContext -> Bool

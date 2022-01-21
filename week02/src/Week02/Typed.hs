@@ -32,9 +32,9 @@ import           Prelude              (IO, Semigroup (..), String)
 import           Text.Printf          (printf)
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: () -> Integer -> ScriptContext -> Bool
-mkValidator _ r _ = traceIfFalse "wrong redeemer" $ r == 42
-
+mkValidator :: () -> Integer -> ScriptContext -> Bool         --don't care about datum so use unit () type, use Integer type for Redeemer, ScriptContext. If type type validator returns true then validation is OK otherwise if return false then it will give error
+mkValidator _ r _ = traceIfFalse "wrong redeemer" $ r == 42   --traceIfFalse (BuiltinString -> Bool --> Bool) displays an error message "wrong redeemer" if the Bool returns a false
+                                                              --if the second argument Bool returns true then first argument (the string "wrong redeemer") is ignored and will return true
 data Typed
 instance Scripts.ValidatorTypes Typed where
     type instance DatumType Typed = ()

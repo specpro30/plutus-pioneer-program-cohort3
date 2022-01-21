@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE OverloadedStrings   #-}   --need to use to produce a string
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -18,7 +18,7 @@ import           Plutus.Contract
 import           PlutusTx            (Data (..))
 import qualified PlutusTx
 import qualified PlutusTx.Builtins   as Builtins
-import           PlutusTx.Prelude    hiding (Semigroup(..), unless)
+import           PlutusTx.Prelude    hiding (Semigroup(..), unless)   -- special version of Prelude for Plutus
 import           Ledger              hiding (singleton)
 import           Ledger.Constraints  as Constraints
 import qualified Ledger.Scripts      as Scripts
@@ -34,8 +34,8 @@ import           Text.Printf         (printf)
 {-# INLINABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkValidator _ r _
-    | r == Builtins.mkI 42 = ()
-    | otherwise            = traceError "wrong redeemer!"
+    | r == Builtins.mkI 42 = ()                             -- check to see if Redeemer is 42
+    | otherwise            = traceError "wrong redeemer!"   -- otherwise return an error
 
 validator :: Validator
 validator = mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
@@ -48,7 +48,7 @@ scrAddress = scriptAddress validator
 
 type GiftSchema =
             Endpoint "give" Integer
-        .\/ Endpoint "grab" Integer
+        .\/ Endpoint "grab" Integer  -- need to add Integer argument to check the Redeemer is equal to 42
 
 give :: AsContractError e => Integer -> Contract w s e ()
 give amount = do
@@ -57,14 +57,14 @@ give amount = do
     void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
     logInfo @String $ printf "made a gift of %d lovelace" amount
 
-grab :: forall w s e. AsContractError e => Integer -> Contract w s e ()
+grab :: forall w s e. AsContractError e => Integer -> Contract w s e ()   -- need to add Integer argument to check the Redeemer is equal to 42
 grab n = do
     utxos <- utxosAt scrAddress
     let orefs   = fst <$> Map.toList utxos
         lookups = Constraints.unspentOutputs utxos      <>
                   Constraints.otherScript validator
         tx :: TxConstraints Void Void
-        tx      = mconcat [mustSpendScriptOutput oref $ Redeemer $ Builtins.mkI n | oref <- orefs]
+        tx      = mconcat [mustSpendScriptOutput oref $ Redeemer $ Builtins.mkI n | oref <- orefs]  -- need to change to Builtins.mkI n to check if Redeemer is 42
     ledgerTx <- submitTxConstraintsWith @Void lookups tx
     void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
     logInfo @String $ "collected gifts"
@@ -73,7 +73,7 @@ endpoints :: Contract () GiftSchema Text ()
 endpoints = awaitPromise (give' `select` grab') >> endpoints
   where
     give' = endpoint @"give" give
-    grab' = endpoint @"grab" grab
+    grab' = endpoint @"grab" grab   --argument passed onto grab
 
 mkSchemaDefinitions ''GiftSchema
 
