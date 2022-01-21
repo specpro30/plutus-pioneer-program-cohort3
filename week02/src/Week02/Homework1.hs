@@ -32,23 +32,28 @@ import           Text.Printf          (printf)
 {-# INLINABLE mkValidator #-}
 -- This should validate if and only if the two Booleans in the redeemer are equal!
 mkValidator :: () -> (Bool, Bool) -> ScriptContext -> Bool
-mkValidator _ _ _ = True -- FIX ME!
+mkValidator _ (r1, r2) _ = traceIfFalse "Bool not equal" $ r1 == r2 -- FIX ME!
 
 data Typed
 instance Scripts.ValidatorTypes Typed where
--- Implement the instance!
+    type instance DatumType Typed = () -- Implement the instance!
+    type instance RedeemerType Typed = (Bool, Bool)
 
 typedValidator :: Scripts.TypedValidator Typed
-typedValidator = undefined -- FIX ME!
+typedValidator = Scripts.mkTypedValidator @Typed  -- FIX ME!
+    $$(PlutusTx.compile [|| mkValidator ||])
+    $$(PlutusTx.compile [|| wrap ||])
+  where
+      wrap = Scripts.wrapValidator @() @(Bool, Bool)
 
 validator :: Validator
-validator = undefined -- FIX ME!
+validator = Scripts.validatorScript typedValidator -- FIX ME!
 
 valHash :: Ledger.ValidatorHash
-valHash = undefined -- FIX ME!
+valHash = Scripts.validatorHash typedValidator     -- FIX ME!
 
 scrAddress :: Ledger.Address
-scrAddress = undefined -- FIX ME!
+scrAddress = scriptAddress validator -- FIX ME!
 
 type GiftSchema =
             Endpoint "give" Integer
