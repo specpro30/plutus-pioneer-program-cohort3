@@ -13,9 +13,11 @@
 module Week05.Homework2 where
 
 import           Control.Monad          hiding (fmap)
+import           Data.Aeson             (FromJSON, ToJSON)
 import qualified Data.Map               as Map
 import           Data.Text              (Text)
 import           Data.Void              (Void)
+import           GHC.Generics           (Generic)
 import           Plutus.Contract        as Contract
 import           Plutus.Trace.Emulator  as Emulator
 import qualified PlutusTx
@@ -32,18 +34,47 @@ import           Wallet.Emulator.Wallet
 -- Minting policy for an NFT, where the minting transaction must consume the given UTxO as input
 -- and where the TokenName will be the empty ByteString.
 mkPolicy :: TxOutRef -> () -> ScriptContext -> Bool
-mkPolicy oref () ctx = True -- FIX ME!
+mkPolicy oref () ctx = traceIfFalse "UTxO not consumed"   hasUTxO           &&  -- check if UTXO is indeed consumed
+                       traceIfFalse "wrong amount minted" checkMintedAmount
+  where
+    info :: TxInfo
+    info = scriptContextTxInfo ctx
+
+    hasUTxO :: Bool
+    hasUTxO = any (\i -> txInInfoOutRef i == oref) $ txInfoInputs info 
+
+    checkMintedAmount :: Bool
+    checkMintedAmount = case flattenValue (txInfoMint info) of
+        [(_, _, amt)] -> amt == 1
+        _               -> False      
 
 policy :: TxOutRef -> Scripts.MintingPolicy
-policy oref = undefined -- IMPLEMENT ME!
+policy oref = mkMintingPolicyScript $
+    $$(PlutusTx.compile [|| \oref' -> Scripts.wrapMintingPolicy $ mkPolicy oref' ||])
+    `PlutusTx.applyCode`
+    PlutusTx.liftCode oref  
 
 curSymbol :: TxOutRef -> CurrencySymbol
-curSymbol = undefined -- IMPLEMENT ME!
+curSymbol oref = scriptCurrencySymbol $ policy oref
+
+emptyTn :: TokenName
+emptyTn = Value.TokenName emptyByteString
+
 
 type NFTSchema = Endpoint "mint" Address
 
 mint :: Address -> Contract w NFTSchema Text ()
-mint _ = undefined -- IMPLEMENT ME!
+mint addy = do
+    utxos <- utxosAt $ addy
+    case Map.keys utxos of
+        []       -> Contract.logError @String "no utxo found"
+        oref : _ -> do                -- takes the first utxo (oref) in the list ( : _ )
+            let val     = Value.singleton (curSymbol oref) emptyTn 1
+                lookups = Constraints.mintingPolicy (policy oref) <> Constraints.unspentOutputs utxos
+                tx      = Constraints.mustMintValue val <> Constraints.mustSpendPubKeyOutput oref
+            ledgerTx <- submitTxConstraintsWith @Void lookups tx
+            void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+            Contract.logInfo @String $ printf "forged %s" (show val)
 
 endpoints :: Contract () NFTSchema Text ()
 endpoints = mint' >> endpoints
